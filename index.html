@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>CYBER SURVIVOR: OVERDRIVE | الناجي السيبراني</title>
+    <meta name="description" content="لعبة أكشن روجلايت سايبربانك فائقة الحماس والسرعة تعمل مباشرة في المتصفح بمؤثرات بصرية وصوتية مذهلة.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=Orbitron:wght@500;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="game-container">
+        <!-- Game Canvas -->
+        <canvas id="gameCanvas"></canvas>
+
+        <!-- CRT & Glow Post-Processing Overlays -->
+        <div id="crt-overlay" class="crt-overlay"></div>
+        <div id="vignette-overlay" class="vignette-overlay"></div>
+
+        <!-- HUD Layer -->
+        <div id="hud" class="hud-layer hidden">
+            <!-- Top Bar: Level, XP Bar, Wave, Timer, Score -->
+            <div class="hud-top">
+                <div class="hud-stat-box score-box">
+                    <span class="label" data-i18n="score">النقاط</span>
+                    <span id="hud-score" class="value glow-cyan">0</span>
+                </div>
+                
+                <div class="xp-bar-wrapper">
+                    <div class="level-indicator">
+                        <span data-i18n="lvl">مستوى</span> <span id="hud-level">1</span>
+                    </div>
+                    <div class="xp-bar-track">
+                        <div id="hud-xp-fill" class="xp-bar-fill"></div>
+                    </div>
+                    <span id="hud-xp-text" class="xp-text">0 / 100</span>
+                </div>
+
+                <div class="hud-stat-box timer-box">
+                    <span class="label" data-i18n="time">الوقت</span>
+                    <span id="hud-timer" class="value glow-yellow">00:00</span>
+                </div>
+                
+                <div class="hud-stat-box wave-box">
+                    <span class="label" data-i18n="wave">الموجة</span>
+                    <span id="hud-wave" class="value glow-magenta">1</span>
+                </div>
+
+                <div class="hud-action-btns">
+                    <button id="btn-fullscreen" class="hud-btn" title="Fullscreen" aria-label="Fullscreen">⛶</button>
+                    <button id="btn-pause" class="hud-btn" title="Pause" aria-label="Pause">
+                        <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+                            <rect x="6" y="4" width="4" height="16" rx="2"></rect>
+                            <rect x="14" y="4" width="4" height="16" rx="2"></rect>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Health & Dash & Ultimate Status Bars -->
+            <div class="hud-player-status">
+                <div class="hp-bar-track">
+                    <div id="hud-hp-fill" class="hp-bar-fill"></div>
+                    <span id="hud-hp-text" class="hp-text">100 / 100</span>
+                </div>
+                <div class="ability-status-row">
+                    <!-- Dash Indicator -->
+                    <div class="ability-badge" id="badge-dash">
+                        <div class="badge-ring" id="dash-cd-ring"></div>
+                        <span class="badge-icon">⚡</span>
+                        <span class="badge-label" data-i18n="dash">اندفاع [SPACE]</span>
+                    </div>
+                    <!-- Ultimate Indicator -->
+                    <div class="ability-badge" id="badge-ultimate">
+                        <div class="badge-ring" id="ult-cd-ring"></div>
+                        <span class="badge-icon">💥</span>
+                        <span class="badge-label" data-i18n="overdrive">القدرة القصوى [E]</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Weapon Inventory Row -->
+            <div id="hud-weapons" class="hud-weapons-container"></div>
+
+            <!-- Boss Health Bar (Appears during boss waves) -->
+            <div id="boss-bar-container" class="boss-bar-container hidden">
+                <div class="boss-header">
+                    <span id="boss-name" class="boss-title">CYBER HYDRA</span>
+                    <span id="boss-hp-pct" class="boss-pct">100%</span>
+                </div>
+                <div class="boss-bar-track">
+                    <div id="boss-bar-fill" class="boss-bar-fill"></div>
+                </div>
+            </div>
+
+            <!-- Kill Count & Gems -->
+            <div class="hud-bottom-stats">
+                <div class="stat-pill">
+                    <span class="icon">💀</span>
+                    <span id="hud-kills">0</span>
+                </div>
+                <div class="stat-pill">
+                    <span class="icon">💎</span>
+                    <span id="hud-plasma">0</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mobile & Tablet Dual Stick Touch Controls -->
+        <div id="touch-controls" class="touch-controls hidden">
+            <!-- Left Virtual Joystick: 360 Movement -->
+            <div id="joystick-move" class="joystick-base move-stick">
+                <div id="joystick-move-thumb" class="joystick-thumb"></div>
+                <span class="stick-label" data-i18n="stick_move">حركة</span>
+            </div>
+
+            <!-- Right Virtual Joystick: Aim & Fire (Twin-Stick) -->
+            <div id="joystick-aim" class="joystick-base aim-stick">
+                <div id="joystick-aim-thumb" class="joystick-thumb aim-thumb"></div>
+                <span class="stick-label" data-i18n="stick_aim">تصويب ورماية</span>
+            </div>
+
+            <!-- Quick Action Buttons -->
+            <div class="touch-action-buttons">
+                <button id="touch-btn-dash" class="touch-action-btn dash-btn" aria-label="Dash">⚡</button>
+                <button id="touch-btn-ult" class="touch-action-btn ult-btn" aria-label="Ultimate">💥</button>
+            </div>
+        </div>
+
+        <!-- MENU OVERLAYS -->
+
+        <!-- 1. Main Menu -->
+        <div id="menu-start" class="screen-overlay active">
+            <div class="menu-glass-panel hero-panel">
+                <div class="brand-badge">
+                    <span class="pulse-dot"></span>
+                    <span class="badge-text">NEXT-GEN BROWSER ROGUELITE</span>
+                </div>
+                <h1 class="game-logo glitch" data-text="CYBER SURVIVOR">CYBER SURVIVOR</h1>
+                <h2 class="sub-logo glow-cyan">OVERDRIVE // السرعة القصوى</h2>
+                <p class="tagline" data-i18n="tagline">واجه أسراب الروبوتات القاتلة، طوّر ترسانتك السيبرانية، وتحدّ أعتى الزعماء في معركة بقاء لا نهائية!</p>
+
+                <!-- Hero Ship Carousel Preview -->
+                <div class="character-preview-card">
+                    <div class="ship-canvas-box">
+                        <canvas id="previewCanvas" width="160" height="160"></canvas>
+                    </div>
+                    <div class="ship-details">
+                        <div class="ship-selector-arrows">
+                            <button id="btn-prev-ship" class="icon-nav-btn">&larr;</button>
+                            <h3 id="ship-name" class="glow-magenta">VANGUARD-01</h3>
+                            <button id="btn-next-ship" class="icon-nav-btn">&rarr;</button>
+                        </div>
+                        <p id="ship-desc" class="ship-info-text">طائرة متوازنة مجهزة بمدافع البلازما المزدوجة وقدرة نبض الطاقة الكهرومغناطيسية.</p>
+                        <div class="ship-stats-grid">
+                            <div class="stat-row">
+                                <span data-i18n="stat_speed">السرعة</span>
+                                <div class="stat-bar"><div id="stat-spd-fill" class="fill" style="width: 70%"></div></div>
+                            </div>
+                            <div class="stat-row">
+                                <span data-i18n="stat_armor">الدرع</span>
+                                <div class="stat-bar"><div id="stat-arm-fill" class="fill" style="width: 60%"></div></div>
+                            </div>
+                            <div class="stat-row">
+                                <span data-i18n="stat_firepower">القوة الهجومية</span>
+                                <div class="stat-bar"><div id="stat-pwr-fill" class="fill" style="width: 80%"></div></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="menu-buttons-group">
+                    <button id="btn-start-game" class="btn-cyber btn-primary-glow">
+                        <span class="btn-content">
+                            <span class="btn-icon">🚀</span>
+                            <span class="btn-text" data-i18n="play_now">ابدأ المعركة الآن</span>
+                        </span>
+                    </button>
+                    <div class="menu-sub-buttons">
+                        <button id="btn-open-upgrades" class="btn-cyber btn-secondary">
+                            <span class="btn-icon">⚡</span>
+                            <span data-i18n="meta_upgrades">ترقيات النواة</span>
+                        </button>
+                        <button id="btn-open-settings" class="btn-cyber btn-secondary">
+                            <span class="btn-icon">⚙️</span>
+                            <span data-i18n="settings">الإعدادات</span>
+                        </button>
+                        <button id="btn-open-howtoplay" class="btn-cyber btn-secondary">
+                            <span class="btn-icon">📖</span>
+                            <span data-i18n="how_to_play">طريقة اللعب</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Footer Language Switch & Credits -->
+                <div class="menu-footer">
+                    <div class="lang-switch-group">
+                        <button id="btn-lang-ar" class="lang-btn active">العربية 🇸🇦</button>
+                        <button id="btn-lang-en" class="lang-btn">English 🌐</button>
+                    </div>
+                    <div class="high-score-tag">
+                        <span data-i18n="best_score">أفضل نتيجة:</span> <span id="menu-best-score" class="glow-yellow">0</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. Level Up Modal (Roguelike Card Selection) -->
+        <div id="modal-levelup" class="screen-overlay hidden">
+            <div class="levelup-container">
+                <div class="levelup-header">
+                    <span class="levelup-badge glow-cyan">SYSTEM UPGRADE // ترقية النظام</span>
+                    <h2 class="levelup-title glow-yellow" data-i18n="choose_upgrade">اختر تعزيزك التكتيكي</h2>
+                    <p class="levelup-subtitle" data-i18n="upgrade_subtitle">قوة البلازما جاهزة للدمج مع مركبتك</p>
+                </div>
+                <div id="upgrade-cards" class="upgrade-cards-grid">
+                    <!-- Cards will be injected dynamically -->
+                </div>
+                <div class="levelup-footer">
+                    <button id="btn-reroll" class="btn-cyber btn-reroll">
+                        <span>🎲</span> <span data-i18n="reroll">إعادة السحب</span> (<span id="reroll-count">1</span>)
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. Pause Screen -->
+        <div id="modal-pause" class="screen-overlay hidden">
+            <div class="menu-glass-panel small-panel">
+                <h2 class="glow-cyan" data-i18n="game_paused">المعركة متوقفة مؤقتاً</h2>
+                <div class="pause-stats-summary">
+                    <div><span data-i18n="time">الوقت:</span> <span id="pause-time" class="glow-yellow">00:00</span></div>
+                    <div><span data-i18n="kills">الأعداء المدمرون:</span> <span id="pause-kills" class="glow-magenta">0</span></div>
+                    <div><span data-i18n="score">النقاط:</span> <span id="pause-score" class="glow-cyan">0</span></div>
+                </div>
+                <div class="menu-buttons-group">
+                    <button id="btn-resume-game" class="btn-cyber btn-primary-glow">
+                        <span data-i18n="resume">استئناف المعركة</span>
+                    </button>
+                    <button id="btn-pause-settings" class="btn-cyber btn-secondary">
+                        <span data-i18n="settings">الإعدادات</span>
+                    </button>
+                    <button id="btn-pause-quit" class="btn-cyber btn-danger">
+                        <span data-i18n="quit_to_menu">العودة للقائمة الرئيسية</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 4. Game Over / Victory Screen -->
+        <div id="modal-gameover" class="screen-overlay hidden">
+            <div class="menu-glass-panel gameover-panel">
+                <div id="gameover-status-badge" class="badge-danger">MISSION COMPROMISED // فشلت المهمة</div>
+                <h2 id="gameover-title" class="gameover-title glow-red" data-i18n="defeated">تم تدمير المركبة</h2>
+                <p id="gameover-cause" class="gameover-sub">صمدت ببسالة في قلب العاصفة السيبرانية</p>
+
+                <div class="run-stats-grid">
+                    <div class="stat-card">
+                        <span class="card-icon">⏱️</span>
+                        <span class="card-val glow-yellow" id="go-time">00:00</span>
+                        <span class="card-lbl" data-i18n="time_survived">وقت الصمود</span>
+                    </div>
+                    <div class="stat-card">
+                        <span class="card-icon">💀</span>
+                        <span class="card-val glow-magenta" id="go-kills">0</span>
+                        <span class="card-lbl" data-i18n="total_kills">الأعداء المدمرون</span>
+                    </div>
+                    <div class="stat-card">
+                        <span class="card-icon">⭐</span>
+                        <span class="card-val glow-cyan" id="go-score">0</span>
+                        <span class="card-lbl" data-i18n="final_score">النتيجة النهائية</span>
+                    </div>
+                    <div class="stat-card">
+                        <span class="card-icon">💎</span>
+                        <span class="card-val glow-plasma" id="go-plasma">+0</span>
+                        <span class="card-lbl" data-i18n="plasma_gathered">بلازما مكتسبة</span>
+                    </div>
+                </div>
+
+                <div class="menu-buttons-group">
+                    <button id="btn-restart-game" class="btn-cyber btn-primary-glow">
+                        <span class="btn-icon">🔄</span>
+                        <span data-i18n="play_again">إعادة المحاولة فوراً</span>
+                    </button>
+                    <button id="btn-gameover-menu" class="btn-cyber btn-secondary">
+                        <span data-i18n="back_to_menu">القائمة الرئيسية</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 5. Meta Upgrades Shop Modal -->
+        <div id="modal-meta-shop" class="screen-overlay hidden">
+            <div class="menu-glass-panel shop-panel">
+                <div class="shop-header">
+                    <div>
+                        <h2 class="glow-cyan" data-i18n="core_hangar">مرآب الترقيات الدائمة</h2>
+                        <p data-i18n="core_shop_desc">أنفق بلورات البلازما لتعزيز أسطولك بشكل دائم في جميع الجولات!</p>
+                    </div>
+                    <div class="plasma-bank-badge">
+                        <span>💎</span>
+                        <span id="shop-plasma-balance" class="glow-cyan">0</span>
+                    </div>
+                </div>
+
+                <div id="meta-upgrades-grid" class="shop-items-grid">
+                    <!-- Dynamic meta upgrade cards -->
+                </div>
+
+                <div class="shop-footer">
+                    <button id="btn-close-shop" class="btn-cyber btn-primary-glow">
+                        <span data-i18n="back">الرجوع</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 6. Settings Modal -->
+        <div id="modal-settings" class="screen-overlay hidden">
+            <div class="menu-glass-panel small-panel">
+                <h2 class="glow-cyan" data-i18n="settings">الإعدادات</h2>
+                
+                <div class="settings-list">
+                    <div class="setting-item">
+                        <span data-i18n="music_volume">مستوى الموسيقى:</span>
+                        <input type="range" id="slider-music" min="0" max="100" value="70">
+                    </div>
+                    <div class="setting-item">
+                        <span data-i18n="sfx_volume">المؤثرات الصوتية:</span>
+                        <input type="range" id="slider-sfx" min="0" max="100" value="80">
+                    </div>
+                    <div class="setting-item">
+                        <span data-i18n="screen_shake">اهتزاز الشاشة:</span>
+                        <label class="switch">
+                            <input type="checkbox" id="check-screenshake" checked>
+                            <span class="slider round"></span>
+                        </label>
+                    </div>
+                    <div class="setting-item">
+                        <span data-i18n="auto_aim">التصويب التلقائي:</span>
+                        <label class="switch">
+                            <input type="checkbox" id="check-autoaim">
+                            <span class="slider round"></span>
+                        </label>
+                    </div>
+                    <div class="setting-item">
+                        <span data-i18n="crt_bloom">تأثيرات النيون (CRT Glow):</span>
+                        <label class="switch">
+                            <input type="checkbox" id="check-crt" checked>
+                            <span class="slider round"></span>
+                        </label>
+                    </div>
+                </div>
+
+                <button id="btn-close-settings" class="btn-cyber btn-primary-glow">
+                    <span data-i18n="save_close">حفظ وإغلاق</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- 7. How to Play Modal -->
+        <div id="modal-howtoplay" class="screen-overlay hidden">
+            <div class="menu-glass-panel guide-panel">
+                <h2 class="glow-cyan" data-i18n="how_to_play_title">دليل الطيار السيبراني</h2>
+                <div class="guide-grid">
+                    <div class="guide-card">
+                        <div class="guide-icon">🎮</div>
+                        <h4 data-i18n="controls_title">التحكم</h4>
+                        <p data-i18n="controls_desc">الحركة: <b>WASD</b> أو الأسهم.<br>الاندفاع السريع: <b>مسطرة المسافات (Space)</b>.<br>القدرة القصوى: <b>مفتاح E</b>.<br>التصويب: بالماوس أو التوجيه التلقائي الذكي.</p>
+                    </div>
+                    <div class="guide-card">
+                        <div class="guide-icon">💎</div>
+                        <h4 data-i18n="collect_evolve">الجمع والتطوير</h4>
+                        <p data-i18n="collect_desc">اجمع بلورات الطاقة لترقية مستواك واختيار ترقيات الأسلحة والقدرات لتصنع توليفة أسلحة لا تُقهر.</p>
+                    </div>
+                    <div class="guide-card">
+                        <div class="guide-icon">👾</div>
+                        <h4 data-i18n="bosses_title">الزعماء والموجات</h4>
+                        <p data-i18n="bosses_desc">تزداد ضراوة الأعداء بمرور الوقت! احذر من أشعة الليزر الحمراء وواجه زعيم الموجة الخامسة والعاشرة للحصول على غنائم أسطورية.</p>
+                    </div>
+                </div>
+                <button id="btn-close-howtoplay" class="btn-cyber btn-primary-glow">
+                    <span data-i18n="got_it">فهمت، لنبدأ!</span>
+                </button>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Modular Game Scripts -->
+    <script src="audio.js"></script>
+    <script src="particles.js"></script>
+    <script src="weapons.js"></script>
+    <script src="entities.js"></script>
+    <script src="game.js"></script>
+</body>
+</html>
