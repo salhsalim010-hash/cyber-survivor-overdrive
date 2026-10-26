@@ -1,0 +1,974 @@
+/* =========================================================
+   CYBERWING 3D: QUANTUM STRIKE - STYLING
+   State-of-the-art 3D Aerospace Cockpit HUD & Glassmorphism
+   ========================================================= */
+
+:root {
+    --bg-dark: #04060f;
+    --neon-cyan: #00f3ff;
+    --neon-magenta: #ff0055;
+    --neon-yellow: #ffe600;
+    --neon-purple: #9d00ff;
+    --neon-red: #ff2244;
+    --neon-green: #00ff66;
+
+    --hud-glass: rgba(8, 14, 28, 0.72);
+    --hud-border: rgba(0, 243, 255, 0.35);
+    
+    --font-heading: 'Orbitron', 'Cairo', sans-serif;
+    --font-body: 'Cairo', 'Orbitron', sans-serif;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: none;
+}
+
+body, html {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background-color: var(--bg-dark);
+    font-family: var(--font-body);
+    color: #ffffff;
+}
+
+#game-container {
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+}
+
+/* WebGL 3D Canvas */
+#webglCanvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+}
+
+/* Speed Warp Lines Overlay */
+#speedLinesCanvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 5;
+    opacity: 0.85;
+}
+
+/* Cockpit Scanlines & Vignette */
+.cockpit-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.03));
+    background-size: 100% 4px, 6px 100%;
+    z-index: 6;
+    opacity: 0.6;
+}
+
+.vignette-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    box-shadow: inset 0 0 140px rgba(0, 0, 0, 0.8);
+    z-index: 7;
+}
+
+/* =========================================================
+   3D Flight HUD Layer
+   ========================================================= */
+.hud-layer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 18px 26px;
+}
+
+.hud-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    gap: 16px;
+}
+
+.hud-stat-box {
+    background: var(--hud-glass);
+    border: 1px solid var(--hud-border);
+    border-radius: 10px;
+    padding: 8px 16px;
+    backdrop-filter: blur(12px);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 100px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
+    position: relative;
+}
+
+.hud-stat-box .label {
+    font-size: 0.7rem;
+    font-family: var(--font-heading);
+    color: #8da4c8;
+    letter-spacing: 1px;
+}
+
+.hud-stat-box .value {
+    font-size: 1.35rem;
+    font-weight: 700;
+    font-family: var(--font-heading);
+}
+
+.combo-pill {
+    position: absolute;
+    bottom: -10px;
+    background: var(--neon-magenta);
+    color: #fff;
+    font-size: 0.65rem;
+    font-family: var(--font-heading);
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 10px;
+    box-shadow: 0 0 8px var(--neon-magenta);
+}
+
+/* Speed Gauge */
+.hud-center-flight-status {
+    background: var(--hud-glass);
+    border: 1px solid var(--hud-border);
+    padding: 6px 20px;
+    border-radius: 20px;
+    backdrop-filter: blur(12px);
+    box-shadow: 0 0 20px rgba(0, 243, 255, 0.2);
+}
+
+.speed-gauge-wrap {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.speed-label {
+    font-size: 0.75rem;
+    font-family: var(--font-heading);
+    color: #a0c2e8;
+}
+
+.speed-num {
+    font-size: 1.4rem;
+    font-family: var(--font-heading);
+    font-weight: 900;
+    min-width: 50px;
+}
+
+.speed-meter-track {
+    width: 140px;
+    height: 8px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.speed-meter-fill {
+    width: 40%;
+    height: 100%;
+    background: linear-gradient(90deg, var(--neon-cyan), var(--neon-yellow), var(--neon-magenta));
+    box-shadow: 0 0 10px var(--neon-yellow);
+    transition: width 0.1s linear;
+}
+
+/* Top Right Actions */
+.hud-top-right-group {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.hud-action-btns {
+    display: flex;
+    gap: 8px;
+}
+
+.hud-btn {
+    pointer-events: auto;
+    background: rgba(12, 18, 36, 0.85);
+    border: 1px solid var(--neon-cyan);
+    color: var(--neon-cyan);
+    width: 42px;
+    height: 42px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 1.1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 0 12px rgba(0, 243, 255, 0.25);
+    transition: all 0.2s;
+}
+
+.hud-btn:hover {
+    background: var(--neon-cyan);
+    color: #000;
+    box-shadow: 0 0 20px var(--neon-cyan);
+    transform: scale(1.05);
+}
+
+/* Central Flight Reticle */
+.central-reticle-wrap {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.flight-crosshair {
+    position: relative;
+    width: 60px;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.08s ease-out;
+}
+
+.crosshair-center-dot {
+    width: 4px;
+    height: 4px;
+    background: var(--neon-cyan);
+    border-radius: 50%;
+    box-shadow: 0 0 8px var(--neon-cyan);
+}
+
+.crosshair-circle {
+    position: absolute;
+    width: 32px;
+    height: 32px;
+    border: 1px solid rgba(0, 243, 255, 0.4);
+    border-radius: 50%;
+}
+
+.crosshair-bracket {
+    position: absolute;
+    width: 8px;
+    height: 18px;
+    border: 2px solid var(--neon-cyan);
+}
+
+.crosshair-bracket.left {
+    left: 0;
+    border-right: none;
+}
+
+.crosshair-bracket.right {
+    right: 0;
+    border-left: none;
+}
+
+/* Target Lock-On Indicator */
+.lockon-box {
+    position: absolute;
+    top: 75px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    animation: lockPulse 0.4s infinite alternate;
+}
+
+@keyframes lockPulse {
+    0% { transform: scale(1); filter: drop-shadow(0 0 5px var(--neon-red)); }
+    100% { transform: scale(1.1); filter: drop-shadow(0 0 15px var(--neon-red)); }
+}
+
+.lockon-ring {
+    width: 46px;
+    height: 46px;
+    border: 2px dashed var(--neon-red);
+    border-radius: 50%;
+    animation: spinSlow 3s linear infinite;
+}
+
+@keyframes spinSlow {
+    100% { transform: rotate(360deg); }
+}
+
+.lockon-text {
+    font-size: 0.7rem;
+    font-family: var(--font-heading);
+    font-weight: 700;
+    color: var(--neon-red);
+    letter-spacing: 1.5px;
+}
+
+/* Bottom Flight Status Bars */
+.hud-bottom-bar {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    width: 100%;
+    gap: 20px;
+}
+
+.hud-gauge-group {
+    background: var(--hud-glass);
+    border: 1px solid var(--hud-border);
+    padding: 10px 18px;
+    border-radius: 12px;
+    backdrop-filter: blur(12px);
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 220px;
+}
+
+.gauge-header {
+    display: flex;
+    justify-content: space-between;
+    font-family: var(--font-heading);
+    font-size: 0.8rem;
+    font-weight: 700;
+}
+
+.gauge-track {
+    width: 100%;
+    height: 12px;
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+.hp-fill {
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, #ff0055, #ff3300);
+    box-shadow: 0 0 10px #ff0055;
+    transition: width 0.15s ease;
+}
+
+.boost-fill {
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, #0088ff, var(--neon-cyan));
+    box-shadow: 0 0 10px var(--neon-cyan);
+    transition: width 0.1s linear;
+}
+
+.boost-hint {
+    font-size: 0.65rem;
+    color: #8da4c8;
+    text-align: right;
+    font-family: var(--font-heading);
+}
+
+html[dir="ltr"] .boost-hint {
+    text-align: left;
+}
+
+/* Weapons Indicator Center Bottom */
+.weapon-status-group {
+    background: var(--hud-glass);
+    border: 1px solid var(--hud-border);
+    padding: 8px 16px;
+    border-radius: 12px;
+    display: flex;
+    gap: 16px;
+    backdrop-filter: blur(12px);
+}
+
+.weapon-indicator {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.8rem;
+    font-family: var(--font-heading);
+    color: #8da4c8;
+    padding: 4px 8px;
+    border-radius: 6px;
+    border: 1px solid transparent;
+}
+
+.weapon-indicator.active {
+    color: #fff;
+    border-color: var(--neon-cyan);
+    background: rgba(0, 243, 255, 0.15);
+    box-shadow: 0 0 10px rgba(0, 243, 255, 0.25);
+}
+
+.missile-pills {
+    color: var(--neon-yellow);
+    letter-spacing: 2px;
+}
+
+/* Boss Health Bar */
+.boss-hud-container {
+    position: absolute;
+    top: 80px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 90%;
+    max-width: 620px;
+    background: rgba(20, 6, 16, 0.85);
+    border: 1px solid var(--neon-red);
+    padding: 10px 18px;
+    border-radius: 14px;
+    box-shadow: 0 0 30px rgba(255, 34, 68, 0.4);
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.boss-alert-tag {
+    font-size: 0.65rem;
+    font-family: var(--font-heading);
+    color: var(--neon-red);
+    font-weight: 700;
+    letter-spacing: 2px;
+}
+
+.boss-name {
+    font-size: 1.1rem;
+    font-family: var(--font-heading);
+    font-weight: 900;
+}
+
+.boss-bar-track {
+    width: 100%;
+    height: 14px;
+    background: rgba(0, 0, 0, 0.6);
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+.boss-bar-fill {
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, #ff0055, #ff2200, #ff8800);
+    box-shadow: 0 0 12px #ff0055;
+    transition: width 0.2s ease-out;
+}
+
+/* =========================================================
+   Screen Modals & Menus
+   ========================================================= */
+.screen-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 50;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(4, 6, 16, 0.85);
+    backdrop-filter: blur(14px);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+}
+
+.screen-overlay.active {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.hidden {
+    display: none !important;
+}
+
+.menu-glass-panel {
+    background: rgba(10, 16, 32, 0.88);
+    border: 1px solid rgba(0, 243, 255, 0.35);
+    border-radius: 20px;
+    padding: 32px 42px;
+    box-shadow: 0 0 30px rgba(0, 243, 255, 0.25), 0 20px 50px rgba(0, 0, 0, 0.8);
+    max-width: 680px;
+    width: 90%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+.small-panel {
+    max-width: 440px;
+}
+
+.cyber-badge {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(0, 243, 255, 0.12);
+    border: 1px solid var(--neon-cyan);
+    padding: 4px 14px;
+    border-radius: 20px;
+    font-size: 0.7rem;
+    font-family: var(--font-heading);
+    letter-spacing: 1.5px;
+    color: var(--neon-cyan);
+    font-weight: 700;
+    margin-bottom: 12px;
+}
+
+.pulse-ring {
+    width: 8px;
+    height: 8px;
+    background: var(--neon-cyan);
+    border-radius: 50%;
+    box-shadow: 0 0 8px var(--neon-cyan);
+}
+
+.game-logo {
+    font-family: var(--font-heading);
+    font-size: 3rem;
+    font-weight: 900;
+    letter-spacing: 3px;
+    background: linear-gradient(135deg, #ffffff 20%, var(--neon-cyan) 60%, var(--neon-magenta) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    text-shadow: 0 0 30px rgba(0, 243, 255, 0.5);
+    margin-bottom: 2px;
+}
+
+.sub-title {
+    font-family: var(--font-heading);
+    font-size: 1.25rem;
+    letter-spacing: 2px;
+    margin-bottom: 14px;
+}
+
+.tagline {
+    color: #9cb2d4;
+    font-size: 0.95rem;
+    line-height: 1.6;
+    margin-bottom: 22px;
+    max-width: 520px;
+}
+
+/* Jet Selection Row */
+.jet-selection-row {
+    display: flex;
+    gap: 12px;
+    width: 100%;
+    margin-bottom: 24px;
+}
+
+.jet-card {
+    flex: 1;
+    background: rgba(15, 22, 45, 0.7);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 12px;
+    padding: 14px 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    cursor: pointer;
+    transition: all 0.25s ease;
+}
+
+.jet-card:hover {
+    border-color: var(--neon-cyan);
+    background: rgba(0, 243, 255, 0.1);
+    transform: translateY(-4px);
+}
+
+.jet-card.active {
+    border-color: var(--neon-cyan);
+    background: rgba(0, 243, 255, 0.18);
+    box-shadow: 0 0 20px rgba(0, 243, 255, 0.35);
+}
+
+.jet-avatar {
+    font-size: 1.8rem;
+    margin-bottom: 6px;
+}
+
+.jet-card h4 {
+    font-family: var(--font-heading);
+    font-size: 0.95rem;
+    margin-bottom: 4px;
+}
+
+.jet-role {
+    font-size: 0.75rem;
+    color: #8da4c4;
+}
+
+/* Cyber Buttons */
+.menu-actions-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    width: 100%;
+}
+
+.menu-sub-row {
+    display: flex;
+    gap: 10px;
+    width: 100%;
+}
+
+.btn-cyber-primary {
+    padding: 15px 28px;
+    border-radius: 12px;
+    border: none;
+    font-family: var(--font-heading);
+    font-size: 1.15rem;
+    font-weight: 700;
+    cursor: pointer;
+    background: linear-gradient(135deg, var(--neon-cyan), #0077ff);
+    color: #040818;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    box-shadow: 0 0 25px rgba(0, 243, 255, 0.5);
+    transition: all 0.25s;
+}
+
+.btn-cyber-primary:hover {
+    box-shadow: 0 0 40px rgba(0, 243, 255, 0.8);
+    transform: translateY(-2px);
+}
+
+.btn-cyber-secondary {
+    flex: 1;
+    padding: 12px 18px;
+    border-radius: 10px;
+    background: rgba(14, 20, 42, 0.8);
+    border: 1px solid rgba(0, 243, 255, 0.4);
+    color: #c2d8f6;
+    font-family: var(--font-heading);
+    font-size: 0.95rem;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: all 0.2s;
+}
+
+.btn-cyber-secondary:hover {
+    background: rgba(0, 243, 255, 0.2);
+    color: #fff;
+    border-color: var(--neon-cyan);
+}
+
+.menu-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    margin-top: 24px;
+    padding-top: 16px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.lang-switch-box {
+    display: flex;
+    gap: 6px;
+}
+
+.lang-toggle {
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #8da4c8;
+    padding: 6px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    transition: all 0.2s;
+}
+
+.lang-toggle.active, .lang-toggle:hover {
+    background: rgba(0, 243, 255, 0.2);
+    border-color: var(--neon-cyan);
+    color: var(--neon-cyan);
+}
+
+.best-score-tag {
+    font-family: var(--font-heading);
+    font-size: 0.9rem;
+    color: #8da4c8;
+}
+
+/* =========================================================
+   Mobile Touch Controls
+   ========================================================= */
+.touch-controls {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 30;
+    direction: ltr !important;
+}
+
+.touch-joystick-base {
+    position: absolute;
+    bottom: 35px;
+    left: 35px;
+    width: 120px;
+    height: 120px;
+    background: rgba(10, 16, 32, 0.45);
+    border: 2px solid rgba(0, 243, 255, 0.45);
+    border-radius: 50%;
+    pointer-events: auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(8px);
+}
+
+.touch-joystick-thumb {
+    width: 48px;
+    height: 48px;
+    background: var(--neon-cyan);
+    border-radius: 50%;
+    box-shadow: 0 0 16px var(--neon-cyan);
+    transition: transform 0.04s linear;
+}
+
+.stick-label {
+    position: absolute;
+    bottom: -22px;
+    font-size: 0.7rem;
+    font-family: var(--font-heading);
+    color: #8da4c4;
+    letter-spacing: 1px;
+}
+
+.touch-combat-panel {
+    position: absolute;
+    bottom: 35px;
+    right: 35px;
+    display: flex;
+    gap: 14px;
+    pointer-events: auto;
+}
+
+.touch-circle-btn {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: rgba(12, 18, 38, 0.85);
+    border: 2px solid var(--neon-cyan);
+    color: #fff;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 0 15px rgba(0, 243, 255, 0.3);
+    cursor: pointer;
+}
+
+.touch-circle-btn.btn-boost {
+    border-color: var(--neon-yellow);
+    box-shadow: 0 0 15px rgba(255, 230, 0, 0.35);
+}
+
+.touch-circle-btn.btn-missile {
+    border-color: var(--neon-magenta);
+    box-shadow: 0 0 15px rgba(255, 0, 85, 0.35);
+}
+
+.touch-circle-btn .btn-icon {
+    font-size: 1.2rem;
+}
+
+.touch-circle-btn .btn-lbl {
+    font-size: 0.6rem;
+    font-family: var(--font-heading);
+}
+
+/* =========================================================
+   Game Over & Guide Stats
+   ========================================================= */
+.gameover-panel {
+    max-width: 580px;
+}
+
+.danger-pill {
+    background: rgba(255, 34, 68, 0.2);
+    border: 1px solid var(--neon-red);
+    color: var(--neon-red);
+    padding: 4px 14px;
+    border-radius: 20px;
+    font-family: var(--font-heading);
+    font-size: 0.75rem;
+    letter-spacing: 1.5px;
+    font-weight: 700;
+    margin-bottom: 8px;
+}
+
+.gameover-desc {
+    color: #8da4c8;
+    font-size: 0.95rem;
+    margin-bottom: 22px;
+}
+
+.run-stats-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    width: 100%;
+    margin-bottom: 24px;
+}
+
+.stat-card {
+    background: rgba(14, 20, 42, 0.7);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.stat-card .icon {
+    font-size: 1.3rem;
+    margin-bottom: 4px;
+}
+
+.stat-card .val {
+    font-family: var(--font-heading);
+    font-size: 1.3rem;
+    font-weight: 700;
+}
+
+.stat-card .lbl {
+    font-size: 0.75rem;
+    color: #8da4c8;
+}
+
+/* Guide Cards */
+.guide-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px;
+    margin: 18px 0;
+    text-align: right;
+}
+
+html[dir="ltr"] .guide-grid {
+    text-align: left;
+}
+
+.guide-card {
+    background: rgba(15, 22, 45, 0.75);
+    border: 1px solid rgba(0, 243, 255, 0.2);
+    border-radius: 12px;
+    padding: 14px;
+}
+
+.guide-card .g-icon {
+    font-size: 1.8rem;
+    margin-bottom: 6px;
+}
+
+.guide-card h4 {
+    font-family: var(--font-heading);
+    color: var(--neon-cyan);
+    margin-bottom: 6px;
+    font-size: 0.95rem;
+}
+
+.guide-card p {
+    font-size: 0.8rem;
+    color: #9cb2d4;
+    line-height: 1.5;
+}
+
+/* Settings List */
+.settings-items {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    width: 100%;
+    margin: 20px 0;
+}
+
+.setting-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.95rem;
+    color: #c2d8f6;
+}
+
+.switch {
+    position: relative;
+    display: inline-block;
+    width: 48px;
+    height: 24px;
+}
+.switch input { opacity: 0; width: 0; height: 0; }
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background-color: rgba(255, 255, 255, 0.2);
+    transition: .3s;
+    border-radius: 24px;
+}
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 18px;
+    width: 18px;
+    left: 3px;
+    bottom: 3px;
+    background-color: white;
+    transition: .3s;
+    border-radius: 50%;
+}
+input:checked + .slider { background-color: var(--neon-cyan); }
+input:checked + .slider:before { transform: translateX(24px); }
+
+/* Glow Helpers */
+.glow-cyan { color: var(--neon-cyan); text-shadow: 0 0 10px var(--neon-cyan); }
+.glow-magenta { color: var(--neon-magenta); text-shadow: 0 0 10px var(--neon-magenta); }
+.glow-yellow { color: var(--neon-yellow); text-shadow: 0 0 10px var(--neon-yellow); }
+.glow-red { color: var(--neon-red); text-shadow: 0 0 10px var(--neon-red); }
+
+@media (max-width: 768px) {
+    .game-logo { font-size: 2.2rem; }
+    .jet-selection-row { flex-direction: column; }
+    .hud-center-flight-status { display: none; }
+    .hud-bottom-bar { flex-direction: column; align-items: stretch; }
+    .weapon-status-group { order: -1; }
+}

@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>CYBERWING 3D: QUANTUM STRIKE | أجنحة السايبر 3D</title>
+    <meta name="description" content="لعبة طيران وقتال ثلاثية الأبعاد 3D فائقة السرعة والإثارة بتقنية WebGL تعمل مباشرة في المتصفح.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=Orbitron:wght@500;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="game-container">
+        <!-- 3D WebGL Canvas rendered by Three.js -->
+        <canvas id="webglCanvas"></canvas>
+
+        <!-- Speed Warp Lines Canvas Overlay -->
+        <canvas id="speedLinesCanvas"></canvas>
+
+        <!-- CRT & Sci-Fi Cockpit Scanlines Overlay -->
+        <div class="cockpit-overlay"></div>
+        <div class="vignette-overlay"></div>
+
+        <!-- 3D In-Flight HUD Layer -->
+        <div id="hud" class="hud-layer hidden">
+            <!-- Top HUD Bar: Score, Multiplier, Speed, Boss Alert -->
+            <div class="hud-top">
+                <div class="hud-stat-box score-box">
+                    <span class="label" data-i18n="score">النقاط</span>
+                    <span id="hud-score" class="value glow-cyan">0</span>
+                    <span id="hud-multiplier" class="combo-pill">x1.0</span>
+                </div>
+
+                <div class="hud-center-flight-status">
+                    <div class="speed-gauge-wrap">
+                        <span class="speed-label" data-i18n="speed_mach">السرعة (MACH)</span>
+                        <span id="hud-speed-val" class="speed-num glow-yellow">1.2</span>
+                        <div class="speed-meter-track">
+                            <div id="hud-speed-bar" class="speed-meter-fill"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="hud-top-right-group">
+                    <div class="hud-stat-box distance-box">
+                        <span class="label" data-i18n="distance">المسافة</span>
+                        <span id="hud-distance" class="value glow-magenta">0 KM</span>
+                    </div>
+                    <div class="hud-action-btns">
+                        <button id="btn-camera-toggle" class="hud-btn" title="Toggle Camera View (V)" aria-label="Camera">🎥</button>
+                        <button id="btn-fullscreen" class="hud-btn" title="Fullscreen" aria-label="Fullscreen">⛶</button>
+                        <button id="btn-pause" class="hud-btn" title="Pause" aria-label="Pause">⏸️</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Central 3D Flight Reticle & Pitch Ladder -->
+            <div class="central-reticle-wrap">
+                <div id="flight-crosshair" class="flight-crosshair">
+                    <div class="crosshair-center-dot"></div>
+                    <div class="crosshair-circle"></div>
+                    <div class="crosshair-bracket left"></div>
+                    <div class="crosshair-bracket right"></div>
+                </div>
+                <div id="lockon-indicator" class="lockon-box hidden">
+                    <div class="lockon-ring"></div>
+                    <span class="lockon-text">LOCK // تم القفل</span>
+                </div>
+            </div>
+
+            <!-- Bottom Flight Gauges: Hull Integrity & Quantum Boost Energy -->
+            <div class="hud-bottom-bar">
+                <!-- Hull HP -->
+                <div class="hud-gauge-group">
+                    <div class="gauge-header">
+                        <span class="gauge-title glow-red" data-i18n="hull_integrity">درع الهيكل</span>
+                        <span id="hud-hp-val" class="gauge-val">100%</span>
+                    </div>
+                    <div class="gauge-track hp-track">
+                        <div id="hud-hp-bar" class="gauge-fill hp-fill"></div>
+                    </div>
+                </div>
+
+                <!-- Weapon Arsenal Status -->
+                <div class="weapon-status-group">
+                    <div class="weapon-indicator active" id="indicator-laser">
+                        <span class="w-icon">⚡</span>
+                        <span class="w-name" data-i18n="twin_lasers">مدافع الليزر [L-CLICK]</span>
+                    </div>
+                    <div class="weapon-indicator" id="indicator-missiles">
+                        <span class="w-icon">🚀</span>
+                        <span class="w-name" data-i18n="missiles_label">صواريخ البلازما [R-CLICK / K]</span>
+                        <span id="hud-missile-count" class="missile-pills">●●●●</span>
+                    </div>
+                </div>
+
+                <!-- Quantum Boost Meter -->
+                <div class="hud-gauge-group">
+                    <div class="gauge-header">
+                        <span class="gauge-title glow-cyan" data-i18n="boost_drive">شاحن الكوانتم</span>
+                        <span id="hud-boost-val" class="gauge-val">100%</span>
+                    </div>
+                    <div class="gauge-track boost-track">
+                        <div id="hud-boost-bar" class="gauge-fill boost-fill"></div>
+                    </div>
+                    <div class="boost-hint" data-i18n="boost_hint">[SPACE / SHIFT] للسرعة القصوى</div>
+                </div>
+            </div>
+
+            <!-- Boss Health Bar -->
+            <div id="boss-hud-container" class="boss-hud-container hidden">
+                <div class="boss-info">
+                    <span class="boss-alert-tag">⚠️ DREADNOUGHT CLASS THREAT // خطر وشيك</span>
+                    <h3 id="boss-title" class="boss-name glow-red">TITAN VALKYRIE MOTHERSHIP</h3>
+                </div>
+                <div class="boss-bar-track">
+                    <div id="boss-bar-fill" class="boss-bar-fill"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Touch Controls for Mobile / Tablets -->
+        <div id="touch-controls" class="touch-controls hidden">
+            <!-- Left Flight Stick -->
+            <div id="touch-flight-stick" class="touch-joystick-base">
+                <div id="touch-flight-thumb" class="touch-joystick-thumb"></div>
+                <span class="stick-label" data-i18n="flight_stick">توجيه الطائرة</span>
+            </div>
+
+            <!-- Right Combat Buttons -->
+            <div class="touch-combat-panel">
+                <button id="touch-btn-boost" class="touch-circle-btn btn-boost">
+                    <span class="btn-icon">🔥</span>
+                    <span class="btn-lbl" data-i18n="btn_boost">توربو</span>
+                </button>
+                <button id="touch-btn-missile" class="touch-circle-btn btn-missile">
+                    <span class="btn-icon">🚀</span>
+                    <span class="btn-lbl" data-i18n="btn_missile">صاروخ</span>
+                </button>
+                <button id="touch-btn-fire" class="touch-circle-btn btn-fire">
+                    <span class="btn-icon">⚡</span>
+                    <span class="btn-lbl" data-i18n="btn_fire">إطلاق</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- SCREENS / MODALS -->
+
+        <!-- 1. Start Screen -->
+        <div id="menu-start" class="screen-overlay active">
+            <div class="menu-glass-panel">
+                <div class="cyber-badge">
+                    <span class="pulse-ring"></span>
+                    <span>NEXT-GEN 3D WEBGL FLIGHT COMBAT</span>
+                </div>
+                <h1 class="game-logo" data-text="CYBERWING 3D">CYBERWING 3D</h1>
+                <h2 class="sub-title glow-cyan">QUANTUM STRIKE // أجنحة السايبر</h2>
+                <p class="tagline" data-i18n="menu_tagline">حلق بطائرتك النفاثة الأسرع من الصوت بين ناطحات السحاب النيون، وناور بصواريخ البلازما، وأسقط أسطول المذركرافت العملاق!</p>
+
+                <!-- Jet Selection Tabs -->
+                <div class="jet-selection-row">
+                    <div class="jet-card active" data-jet="valkyrie">
+                        <div class="jet-avatar">🦅</div>
+                        <h4 class="glow-cyan">VALKYRIE-FX</h4>
+                        <span class="jet-role" data-i18n="role_balanced">متوازنة وسريعة</span>
+                    </div>
+                    <div class="jet-card" data-jet="intercept">
+                        <div class="jet-avatar">⚡</div>
+                        <h4 class="glow-magenta">RAZOR-X9</h4>
+                        <span class="jet-role" data-i18n="role_speed">سرعة ومراوغة خارقة</span>
+                    </div>
+                    <div class="jet-card" data-jet="bomber">
+                        <div class="jet-avatar">🛡️</div>
+                        <h4 class="glow-yellow">TITAN-MK3</h4>
+                        <span class="jet-role" data-i18n="role_armor">دروع ثقيلة وصواريخ مزدوجة</span>
+                    </div>
+                </div>
+
+                <!-- Launch Button -->
+                <div class="menu-actions-stack">
+                    <button id="btn-start-game" class="btn-cyber-primary glow-cyan">
+                        <span class="btn-icon">🚀</span>
+                        <span class="btn-text" data-i18n="launch_sortie">بدء التحليق والقتال الآن</span>
+                    </button>
+                    <div class="menu-sub-row">
+                        <button id="btn-open-howtoplay" class="btn-cyber-secondary">
+                            <span>📖</span> <span data-i18n="controls_manual">دليل التحكم</span>
+                        </button>
+                        <button id="btn-open-settings" class="btn-cyber-secondary">
+                            <span>⚙️</span> <span data-i18n="settings">الإعدادات</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Language Switcher & High Score -->
+                <div class="menu-footer">
+                    <div class="lang-switch-box">
+                        <button id="btn-lang-ar" class="lang-toggle active">العربية 🇸🇦</button>
+                        <button id="btn-lang-en" class="lang-toggle">English 🌐</button>
+                    </div>
+                    <div class="best-score-tag">
+                        <span data-i18n="high_score">أعلى رقم قياسي:</span>
+                        <span id="menu-high-score" class="glow-yellow">0</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. Pause Screen -->
+        <div id="modal-pause" class="screen-overlay hidden">
+            <div class="menu-glass-panel small-panel">
+                <h2 class="glow-cyan" data-i18n="mission_paused">المهمة متوقفة مؤقتاً</h2>
+                <div class="pause-stats">
+                    <div><span data-i18n="score">النقاط:</span> <span id="pause-score" class="glow-yellow">0</span></div>
+                    <div><span data-i18n="distance">المسافة المقطوعة:</span> <span id="pause-dist" class="glow-magenta">0 KM</span></div>
+                </div>
+                <div class="menu-actions-stack">
+                    <button id="btn-resume-game" class="btn-cyber-primary glow-cyan">
+                        <span data-i18n="resume">متابعة الطيران</span>
+                    </button>
+                    <button id="btn-pause-quit" class="btn-cyber-secondary">
+                        <span data-i18n="quit_to_menu">العودة للقاعدة</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. Game Over / Mission Complete Screen -->
+        <div id="modal-gameover" class="screen-overlay hidden">
+            <div class="menu-glass-panel gameover-panel">
+                <div id="gameover-status-badge" class="danger-pill">MISSION REPORT // تقرير المهمة</div>
+                <h2 id="gameover-title" class="glow-red" data-i18n="jet_destroyed">تحطمت المقاتلة النفاثة</h2>
+                <p id="gameover-sub" class="gameover-desc">نفذت مناورات جوية بطولية في سماء المدينة السيبرانية</p>
+
+                <div class="run-stats-grid">
+                    <div class="stat-card">
+                        <span class="icon">🏆</span>
+                        <span id="go-score" class="val glow-cyan">0</span>
+                        <span class="lbl" data-i18n="final_score">النتيجة النهائية</span>
+                    </div>
+                    <div class="stat-card">
+                        <span class="icon">✈️</span>
+                        <span id="go-distance" class="val glow-magenta">0 KM</span>
+                        <span class="lbl" data-i18n="distance_flown">المسافة المحققة</span>
+                    </div>
+                    <div class="stat-card">
+                        <span class="icon">💥</span>
+                        <span id="go-kills" class="val glow-yellow">0</span>
+                        <span class="lbl" data-i18n="targets_destroyed">الأهداف المدمرة</span>
+                    </div>
+                    <div class="stat-card">
+                        <span class="icon">⚡</span>
+                        <span id="go-rings" class="val glow-cyan">0</span>
+                        <span class="lbl" data-i18n="rings_collected">بوابات السرعة</span>
+                    </div>
+                </div>
+
+                <div class="menu-actions-stack">
+                    <button id="btn-restart-game" class="btn-cyber-primary glow-cyan">
+                        <span>🔄</span> <span data-i18n="retry_flight">إعادة التحليق فوراً</span>
+                    </button>
+                    <button id="btn-gameover-menu" class="btn-cyber-secondary">
+                        <span data-i18n="back_to_hangar">المرآب الرئيسي</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 4. How to Play Modal -->
+        <div id="modal-howtoplay" class="screen-overlay hidden">
+            <div class="menu-glass-panel guide-panel">
+                <h2 class="glow-cyan" data-i18n="flight_manual">دليل المناورات الجوية 3D</h2>
+                <div class="guide-grid">
+                    <div class="guide-card">
+                        <div class="g-icon">🕹️</div>
+                        <h4 data-i18n="maneuvering">المناورة والتوجيه</h4>
+                        <p data-i18n="maneuver_desc">استخدم <b>WASD</b> أو حركة الماوس للتحليق والميلان الجانبي.<br>اضغط مرتين على <b>A</b> أو <b>D</b> لتنفيذ دوران برميلي <b>(Barrel Roll)</b> يراوغ طلقات العدو!</p>
+                    </div>
+                    <div class="guide-card">
+                        <div class="g-icon">🔥</div>
+                        <h4 data-i18n="afterburner_title">التوربو النفاث الكوانتم</h4>
+                        <p data-i18n="afterburner_desc">استمر بالضغط على <b>مسطرة المسافات (Space)</b> أو <b>Shift</b> للوصول لسرعة ماخ الخارقة مع تأثير تمدد خطوط السرعة.<br>اعبر من خلال <b>حلقات النيون الطافية</b> لإعادة ملء الشاحن.</p>
+                    </div>
+                    <div class="guide-card">
+                        <div class="g-icon">🎯</div>
+                        <h4 data-i18n="combat_systems">أنظمة القتال والرماية</h4>
+                        <p data-i18n="combat_desc"><b>زر الماوس الأيسر</b>: إطلاق مدافع الليزر التوأم.<br><b>زر الماوس الأيمن أو مفتاح K</b>: إطلاق صواريخ البلازما الموجهة نحو الأهداف المقفلة.<br><b>مفتاح V</b>: تبديل زاوية الكاميرا (Chase / Cockpit).</p>
+                    </div>
+                </div>
+                <button id="btn-close-howtoplay" class="btn-cyber-primary glow-cyan">
+                    <span data-i18n="ready_to_fly">مستعد للإقلاع!</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- 5. Settings Modal -->
+        <div id="modal-settings" class="screen-overlay hidden">
+            <div class="menu-glass-panel small-panel">
+                <h2 class="glow-cyan" data-i18n="settings">الإعدادات</h2>
+                <div class="settings-items">
+                    <div class="setting-row">
+                        <span data-i18n="music_vol">مستوى الموسيقى:</span>
+                        <input type="range" id="slider-music" min="0" max="100" value="70">
+                    </div>
+                    <div class="setting-row">
+                        <span data-i18n="sfx_vol">المؤثرات الصوتية:</span>
+                        <input type="range" id="slider-sfx" min="0" max="100" value="80">
+                    </div>
+                    <div class="setting-row">
+                        <span data-i18n="invert_y">عكس محور الارتفاع (Invert Y):</span>
+                        <label class="switch">
+                            <input type="checkbox" id="check-invert-y">
+                            <span class="slider round"></span>
+                        </label>
+                    </div>
+                    <div class="setting-row">
+                        <span data-i18n="graphics_glow">توهج البلورات والنيون:</span>
+                        <label class="switch">
+                            <input type="checkbox" id="check-bloom" checked>
+                            <span class="slider round"></span>
+                        </label>
+                    </div>
+                </div>
+                <button id="btn-close-settings" class="btn-cyber-primary glow-cyan">
+                    <span data-i18n="save_close">حفظ وإغلاق</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Load Local Three.js 3D Library -->
+    <script src="three.min.js"></script>
+
+    <!-- Game Modules -->
+    <script src="audio.js"></script>
+    <script src="world.js"></script>
+    <script src="weapons.js"></script>
+    <script src="entities.js"></script>
+    <script src="game.js"></script>
+</body>
+</html>
