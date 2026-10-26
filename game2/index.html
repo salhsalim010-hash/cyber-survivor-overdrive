@@ -141,18 +141,36 @@
 
             <!-- Right Combat Buttons -->
             <div class="touch-combat-panel">
-                <button id="touch-btn-boost" class="touch-circle-btn btn-boost">
+                <button id="touch-btn-boost" class="touch-circle-btn btn-boost" aria-label="Boost">
                     <span class="btn-icon">🔥</span>
                     <span class="btn-lbl" data-i18n="btn_boost">توربو</span>
                 </button>
-                <button id="touch-btn-missile" class="touch-circle-btn btn-missile">
+                <button id="touch-btn-roll" class="touch-circle-btn btn-roll" aria-label="Barrel Roll">
+                    <span class="btn-icon">🔄</span>
+                    <span class="btn-lbl" data-i18n="btn_roll">مراوغة</span>
+                </button>
+                <button id="touch-btn-missile" class="touch-circle-btn btn-missile" aria-label="Missile">
                     <span class="btn-icon">🚀</span>
                     <span class="btn-lbl" data-i18n="btn_missile">صاروخ</span>
                 </button>
-                <button id="touch-btn-fire" class="touch-circle-btn btn-fire">
+                <button id="touch-btn-fire" class="touch-circle-btn btn-fire" aria-label="Fire">
                     <span class="btn-icon">⚡</span>
                     <span class="btn-lbl" data-i18n="btn_fire">إطلاق</span>
                 </button>
+                <button id="touch-btn-autofire" class="touch-circle-btn btn-autofire" aria-label="Auto Fire">
+                    <span class="btn-icon">🎯</span>
+                    <span class="btn-lbl" data-i18n="btn_autofire">آلي: تشغيل</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Landscape Orientation Advice for Phones -->
+        <div id="landscape-prompt" class="landscape-prompt hidden">
+            <div class="landscape-prompt-content">
+                <div class="rotate-anim-icon">📱 ↷</div>
+                <h3 data-i18n="rotate_device">يرجى تدوير الهاتف بالعرض</h3>
+                <p data-i18n="rotate_desc">لتجربة قيادة ومناورات جوية 3D فائقة الدقة والسلاسة</p>
+                <button id="btn-dismiss-rotate" class="btn-dismiss-rotate">متابعة على أي حال</button>
             </div>
         </div>
 

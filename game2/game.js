@@ -45,8 +45,12 @@ const I18N = {
         role_armor: 'دروع ثقيلة وصواريخ مزدوجة',
         flight_stick: 'توجيه الطائرة',
         btn_boost: 'توربو',
+        btn_roll: 'مراوغة',
         btn_missile: 'صاروخ',
         btn_fire: 'إطلاق',
+        btn_autofire: 'إطلاق آلي',
+        rotate_device: 'يرجى تدوير الهاتف بالعرض',
+        rotate_desc: 'لتجربة قيادة ومناورات جوية 3D فائقة الدقة والسلاسة',
         cause_building: 'سبب التحطم: اصطدام مباشر بناطحة سحاب نيون',
         cause_drone: 'سبب التحطم: انفجار جراء الاصطدام بطائرة معادية',
         cause_boss: 'سبب التحطم: قصف من مدفع المذركرافت العملاقة',
@@ -90,8 +94,12 @@ const I18N = {
         role_speed: 'Supersonic Speed Demon',
         role_armor: 'Heavy Armor & Double Payload',
         btn_boost: 'BOOST',
+        btn_roll: 'ROLL',
         btn_missile: 'TORPEDO',
         btn_fire: 'FIRE',
+        btn_autofire: 'AUTO FIRE',
+        rotate_device: 'ROTATE TO LANDSCAPE',
+        rotate_desc: 'For best supersonic 3D flight precision and panoramic cockpit view',
         cause_building: 'CRASH CAUSE: Direct Impact with Neon Skyscraper',
         cause_drone: 'CRASH CAUSE: Collided with Enemy Hunter Drone',
         cause_boss: 'CRASH CAUSE: Heavy Bombardment from Titan Mothership',
@@ -145,6 +153,7 @@ class CyberwingGame {
         this.isBoosting = false;
         this.touchFlightVector = { x: 0, y: 0 };
         this.touchFlightActive = false;
+        this.autoFire = true;
 
         // Double-tap barrel roll detection
         this.lastTapKey = '';
@@ -429,23 +438,75 @@ class CyberwingGame {
             });
         }
 
-        // Mobile Action buttons
+        // Mobile Action buttons with preventDefault and haptic feedback
         const btnBoost = document.getElementById('touch-btn-boost');
         if (btnBoost) {
-            btnBoost.addEventListener('touchstart', () => { this.isBoosting = true; });
-            btnBoost.addEventListener('touchend', () => { this.isBoosting = false; });
+            btnBoost.addEventListener('touchstart', (e) => { e.preventDefault(); this.isBoosting = true; }, { passive: false });
+            btnBoost.addEventListener('touchend', (e) => { e.preventDefault(); this.isBoosting = false; }, { passive: false });
+        }
+
+        const btnRoll = document.getElementById('touch-btn-roll');
+        if (btnRoll) {
+            btnRoll.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                this.player.startBarrelRoll(Math.random() > 0.5 ? 1 : -1);
+                if (navigator.vibrate) navigator.vibrate(35);
+            }, { passive: false });
         }
 
         const btnFire = document.getElementById('touch-btn-fire');
         if (btnFire) {
-            btnFire.addEventListener('touchstart', () => { this.isFiringLaser = true; });
-            btnFire.addEventListener('touchend', () => { this.isFiringLaser = false; });
+            btnFire.addEventListener('touchstart', (e) => { e.preventDefault(); this.isFiringLaser = true; }, { passive: false });
+            btnFire.addEventListener('touchend', (e) => { e.preventDefault(); this.isFiringLaser = false; }, { passive: false });
         }
 
         const btnMissile = document.getElementById('touch-btn-missile');
         if (btnMissile) {
+            btnMissile.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                this.weapons.fireMissile(this.player.position, this.lockedTarget);
+                if (navigator.vibrate) navigator.vibrate(40);
+            }, { passive: false });
             btnMissile.onclick = () => this.weapons.fireMissile(this.player.position, this.lockedTarget);
         }
+
+        const btnAuto = document.getElementById('touch-btn-autofire');
+        if (btnAuto) {
+            btnAuto.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                this.autoFire = !this.autoFire;
+                btnAuto.classList.toggle('disabled', !this.autoFire);
+                const lbl = btnAuto.querySelector('.btn-lbl');
+                if (lbl) {
+                    lbl.textContent = this.autoFire ? 
+                        (this.currentLang === 'ar' ? 'آلي: تشغيل' : 'AUTO: ON') : 
+                        (this.currentLang === 'ar' ? 'آلي: إيقاف' : 'AUTO: OFF');
+                }
+                if (navigator.vibrate) navigator.vibrate(25);
+            }, { passive: false });
+        }
+
+        // Screen orientation advisor
+        const checkOrientation = () => {
+            const prompt = document.getElementById('landscape-prompt');
+            if (!prompt) return;
+            const isMobile = ('ontouchstart' in window || navigator.maxTouchPoints > 0 || window.innerWidth <= 900);
+            if (isMobile && window.innerHeight > window.innerWidth) {
+                prompt.classList.remove('hidden');
+            } else {
+                prompt.classList.add('hidden');
+            }
+        };
+        window.addEventListener('resize', checkOrientation);
+        window.addEventListener('orientationchange', checkOrientation);
+        const dismissBtn = document.getElementById('btn-dismiss-rotate');
+        if (dismissBtn) {
+            dismissBtn.onclick = () => {
+                const prompt = document.getElementById('landscape-prompt');
+                if (prompt) prompt.classList.add('hidden');
+            };
+        }
+        checkOrientation();
 
         if ('ontouchstart' in window || navigator.maxTouchPoints > 0 || window.innerWidth <= 900) {
             document.getElementById('touch-controls').classList.remove('hidden');
@@ -654,7 +715,7 @@ class CyberwingGame {
         }
 
         // 4. Combat & Weapons
-        if (this.isFiringLaser) {
+        if (this.isFiringLaser || this.autoFire) {
             this.weapons.fireLaser(this.player.position, this.player.speed);
         }
         this.weapons.update(dt, this.enemies.concat(this.boss.active ? [this.boss] : []));
