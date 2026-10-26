@@ -24,8 +24,14 @@ class PlayerJet3D {
 
         this.boostEnergy = 100;
         this.maxBoostEnergy = 100;
+        
+        // Defensive Shields & Hull
         this.maxHp = 100;
         this.hp = 100;
+        this.maxShield = 100;
+        this.shield = 100;
+        this.invulnerableTimer = 0;
+        this.shieldRegenDelay = 0;
 
         // Roll & Banking angles
         this.bankAngle = 0;
@@ -35,7 +41,7 @@ class PlayerJet3D {
         this.rollDirection = 1;
 
         // Bounding Radius
-        this.radius = 5.5;
+        this.radius = 4.5;
     }
 
     buildJetMesh() {
@@ -118,6 +124,17 @@ class PlayerJet3D {
             this.thrusters.push(t);
         });
 
+        // 6. Energy Shield Wireframe Sphere (Flashes when hit/invulnerable)
+        const shieldGeo = new THREE.SphereGeometry(14, 16, 12);
+        const shieldMat = new THREE.MeshBasicMaterial({
+            color: 0x00f3ff,
+            wireframe: true,
+            transparent: true,
+            opacity: 0.0
+        });
+        this.shieldMesh = new THREE.Mesh(shieldGeo, shieldMat);
+        jetGroup.add(this.shieldMesh);
+
         return jetGroup;
     }
 
@@ -126,10 +143,26 @@ class PlayerJet3D {
         this.isBarrelRolling = true;
         this.rollDirection = dir;
         this.barrelRollTimer = 0.45;
+        this.invulnerableTimer = 0.55; // Invulnerable while rolling!
         window.flightAudio.playSonicBoom();
     }
 
     update(dt, inputVector, wantsBoost) {
+        // Invulnerability & Shield Pulse
+        if (this.invulnerableTimer > 0) {
+            this.invulnerableTimer -= dt;
+            this.shieldMesh.material.opacity = Math.sin(performance.now() * 0.025) * 0.35 + 0.35;
+        } else {
+            this.shieldMesh.material.opacity = 0.0;
+        }
+
+        // Shield Auto Regeneration
+        if (this.shieldRegenDelay > 0) {
+            this.shieldRegenDelay -= dt;
+        } else if (this.shield < this.maxShield) {
+            this.shield = Math.min(this.maxShield, this.shield + dt * 25);
+        }
+
         // Boost Engine Logic
         if (wantsBoost && this.boostEnergy > 0) {
             this.isBoosting = true;
@@ -145,14 +178,14 @@ class PlayerJet3D {
         // Forward flight movement along -Z
         this.position.z -= this.speed * dt;
 
-        // Horizontal & Vertical maneuvering with screen boundaries
-        const moveSpeed = 95;
+        // Horizontal & Vertical maneuvering with generous corridor boundaries
+        const moveSpeed = 100;
         this.position.x += inputVector.x * moveSpeed * dt;
         this.position.y += inputVector.y * moveSpeed * dt;
 
-        // Clamping inside city corridor
-        this.position.x = THREE.MathUtils.clamp(this.position.x, -58, 58);
-        this.position.y = THREE.MathUtils.clamp(this.position.y, -35, 55);
+        // Clamping inside city corridor (safe from outer skyscraper line)
+        this.position.x = THREE.MathUtils.clamp(this.position.x, -75, 75);
+        this.position.y = THREE.MathUtils.clamp(this.position.y, -36, 56);
 
         // Barrel Roll Animation
         if (this.isBarrelRolling) {
@@ -186,17 +219,45 @@ class PlayerJet3D {
         window.flightAudio.updateEngineSound(speedRatio, this.isBoosting);
     }
 
-    takeDamage(amount) {
-        if (this.isBarrelRolling) return; // Invulnerability frames during barrel roll!
-        this.hp -= amount;
-        window.flightAudio.playExplosion(1.0);
-        if (this.hp < 0) this.hp = 0;
+    takeDamage(amount, source = 'impact') {
+        if (this.isBarrelRolling || this.invulnerableTimer > 0) {
+            return { damaged: false };
+        }
+
+        this.invulnerableTimer = 1.2; // 1.2 seconds of invulnerability
+        this.shieldRegenDelay = 3.0;  // 3s delay before shield starts recharging
+
+        let remaining = amount;
+        if (this.shield > 0) {
+            if (this.shield >= remaining) {
+                this.shield -= remaining;
+                remaining = 0;
+            } else {
+                remaining -= this.shield;
+                this.shield = 0;
+            }
+        }
+
+        if (remaining > 0) {
+            this.hp = Math.max(0, this.hp - remaining);
+        }
+
+        window.flightAudio.playExplosion(1.1);
+        return { damaged: true, fatal: this.hp <= 0, source };
+    }
+
+    repair(amount = 35) {
+        this.shield = Math.min(this.maxShield, this.shield + amount);
+        this.hp = Math.min(this.maxHp, this.hp + amount * 0.4);
     }
 
     reset() {
         this.position.set(0, 0, 0);
         this.rotation.set(0, 0, 0);
         this.hp = this.maxHp;
+        this.shield = this.maxShield;
+        this.invulnerableTimer = 0;
+        this.shieldRegenDelay = 0;
         this.boostEnergy = this.maxBoostEnergy;
         this.speed = this.baseSpeed;
     }

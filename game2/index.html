@@ -67,14 +67,25 @@
                     <div class="lockon-ring"></div>
                     <span class="lockon-text">LOCK // تم القفل</span>
                 </div>
+                <div id="impact-warning-banner" class="impact-warning-banner hidden">
+                    <span class="warning-icon">⚠️</span>
+                    <span id="impact-warning-text">اصطدام وشيك!</span>
+                </div>
             </div>
 
-            <!-- Bottom Flight Gauges: Hull Integrity & Quantum Boost Energy -->
+            <!-- Bottom Flight Gauges: Shield, Hull, Boost -->
             <div class="hud-bottom-bar">
-                <!-- Hull HP -->
-                <div class="hud-gauge-group">
+                <!-- Dual Defensive Gauges: Energy Shield & Hull Integrity -->
+                <div class="hud-gauge-group defense-group">
                     <div class="gauge-header">
-                        <span class="gauge-title glow-red" data-i18n="hull_integrity">درع الهيكل</span>
+                        <span class="gauge-title glow-cyan" data-i18n="shield_energy">درع الطاقة</span>
+                        <span id="hud-shield-val" class="gauge-val glow-cyan">100%</span>
+                    </div>
+                    <div class="gauge-track shield-track">
+                        <div id="hud-shield-bar" class="gauge-fill shield-fill"></div>
+                    </div>
+                    <div class="gauge-header" style="margin-top: 6px;">
+                        <span class="gauge-title glow-red" data-i18n="hull_integrity">هيكل المقاتلة</span>
                         <span id="hud-hp-val" class="gauge-val">100%</span>
                     </div>
                     <div class="gauge-track hp-track">
@@ -231,6 +242,7 @@
             <div class="menu-glass-panel gameover-panel">
                 <div id="gameover-status-badge" class="danger-pill">MISSION REPORT // تقرير المهمة</div>
                 <h2 id="gameover-title" class="glow-red" data-i18n="jet_destroyed">تحطمت المقاتلة النفاثة</h2>
+                <div id="gameover-cause" class="cause-of-death-box">سبب التحطم: اصطدام بناطحة سحاب نيون</div>
                 <p id="gameover-sub" class="gameover-desc">نفذت مناورات جوية بطولية في سماء المدينة السيبرانية</p>
 
                 <div class="run-stats-grid">

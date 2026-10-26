@@ -12,6 +12,7 @@ const I18N = {
         distance: 'المسافة',
         speed_mach: 'السرعة (MACH)',
         hull_integrity: 'درع الهيكل',
+        shield_energy: 'درع الطاقة',
         twin_lasers: 'مدافع الليزر [L-CLICK]',
         missiles_label: 'صواريخ البلازما [R-CLICK / K]',
         boost_drive: 'شاحن الكوانتم',
@@ -45,13 +46,19 @@ const I18N = {
         flight_stick: 'توجيه الطائرة',
         btn_boost: 'توربو',
         btn_missile: 'صاروخ',
-        btn_fire: 'إطلاق'
+        btn_fire: 'إطلاق',
+        cause_building: 'سبب التحطم: اصطدام مباشر بناطحة سحاب نيون',
+        cause_drone: 'سبب التحطم: انفجار جراء الاصطدام بطائرة معادية',
+        cause_boss: 'سبب التحطم: قصف من مدفع المذركرافت العملاقة',
+        impact_building: 'اصطدام بناطحة سحاب! تم ارتداد المركبة للمسار الآمن',
+        impact_drone: 'اصطدام بطائرة معادية!'
     },
     en: {
         score: 'SCORE',
         distance: 'DISTANCE',
         speed_mach: 'SPEED (MACH)',
         hull_integrity: 'HULL INTEGRITY',
+        shield_energy: 'ENERGY SHIELD',
         twin_lasers: 'TWIN LASERS [L-CLICK]',
         missiles_label: 'PLASMA TORPEDOES [R-CLICK / K]',
         boost_drive: 'QUANTUM DRIVE',
@@ -82,10 +89,14 @@ const I18N = {
         role_balanced: 'Balanced & Agile',
         role_speed: 'Supersonic Speed Demon',
         role_armor: 'Heavy Armor & Double Payload',
-        flight_stick: 'FLIGHT STICK',
         btn_boost: 'BOOST',
         btn_missile: 'TORPEDO',
-        btn_fire: 'FIRE'
+        btn_fire: 'FIRE',
+        cause_building: 'CRASH CAUSE: Direct Impact with Neon Skyscraper',
+        cause_drone: 'CRASH CAUSE: Collided with Enemy Hunter Drone',
+        cause_boss: 'CRASH CAUSE: Heavy Bombardment from Titan Mothership',
+        impact_building: 'SKYSCRAPER IMPACT! Repelling to Safe Lane',
+        impact_drone: 'COLLISION WITH ENEMY CRAFT!'
     }
 };
 
@@ -459,6 +470,8 @@ class CyberwingGame {
         document.getElementById('menu-start').classList.remove('active');
         document.getElementById('hud').classList.remove('hidden');
         document.getElementById('boss-hud-container').classList.add('hidden');
+        const warnBanner = document.getElementById('impact-warning-banner');
+        if (warnBanner) warnBanner.classList.add('hidden');
 
         this.state = 'PLAYING';
         window.flightAudio.startMusic();
@@ -489,11 +502,17 @@ class CyberwingGame {
         this.saveHighScore();
     }
 
-    onPlayerCrashed() {
+    onPlayerCrashed(cause = 'building') {
         this.state = 'GAMEOVER';
         window.flightAudio.stopMusic();
         window.flightAudio.playExplosion(3.0);
         this.saveHighScore();
+
+        const dict = I18N[this.currentLang];
+        const causeKey = `cause_${cause}`;
+        const causeText = dict[causeKey] || dict['cause_building'];
+        const causeEl = document.getElementById('gameover-cause');
+        if (causeEl) causeEl.textContent = causeText;
 
         document.getElementById('go-score').textContent = this.score.toLocaleString();
         document.getElementById('go-distance').textContent = `${(this.distance / 1000).toFixed(1)} KM`;
@@ -502,6 +521,22 @@ class CyberwingGame {
 
         document.getElementById('modal-gameover').classList.remove('hidden');
         document.getElementById('modal-gameover').classList.add('active');
+    }
+
+    triggerImpactAlert(type = 'building') {
+        const banner = document.getElementById('impact-warning-banner');
+        const text = document.getElementById('impact-warning-text');
+        if (!banner || !text) return;
+
+        const dict = I18N[this.currentLang];
+        const msgKey = `impact_${type}`;
+        text.textContent = dict[msgKey] || '⚠️ IMPACT // اصطدام!';
+        banner.classList.remove('hidden');
+
+        if (this.alertTimeout) clearTimeout(this.alertTimeout);
+        this.alertTimeout = setTimeout(() => {
+            banner.classList.add('hidden');
+        }, 1300);
     }
 
     // ==========================================
@@ -597,15 +632,25 @@ class CyberwingGame {
             this.ringsCollected++;
             this.score += 500 * this.comboMultiplier;
             this.player.boostEnergy = Math.min(this.player.maxBoostEnergy, this.player.boostEnergy + 35);
+            this.player.repair(30);
             this.comboMultiplier = Math.min(5.0, this.comboMultiplier + 0.5);
             this.comboTimer = 4.0;
             window.flightAudio.playRingCollected();
         });
 
-        // Building obstacle collision check
-        if (this.world.checkBuildingCollisions(this.player.position, this.player.radius)) {
-            this.player.takeDamage(35);
-            this.comboMultiplier = 1.0;
+        // Building obstacle collision check with safety bounceback
+        const col = this.world.checkBuildingCollisions(this.player.position, this.player.radius);
+        if (col && col.hit) {
+            const res = this.player.takeDamage(25, 'building');
+            if (res && res.damaged) {
+                this.player.position.x += col.pushX;
+                this.comboMultiplier = 1.0;
+                this.triggerImpactAlert('building');
+                if (res.fatal) {
+                    this.onPlayerCrashed('building');
+                    return;
+                }
+            }
         }
 
         // 4. Combat & Weapons
@@ -649,8 +694,15 @@ class CyberwingGame {
                 e.update(dt, this.player.position.z);
                 // Check if drone collided with player
                 if (e.mesh.position.distanceTo(this.player.position) < e.radius + this.player.radius) {
-                    this.player.takeDamage(20);
+                    const res = this.player.takeDamage(20, 'drone');
                     e.destroy();
+                    if (res && res.damaged) {
+                        this.triggerImpactAlert('drone');
+                        if (res.fatal) {
+                            this.onPlayerCrashed('drone');
+                            return;
+                        }
+                    }
                 }
             }
         }
@@ -749,7 +801,13 @@ class CyberwingGame {
         const distKm = (this.distance / 1000).toFixed(2);
         document.getElementById('hud-distance').textContent = `${distKm} KM`;
 
-        // HP & Boost
+        // Defense: Shield & Hull
+        const shieldPct = Math.max(0, Math.min(100, (this.player.shield / this.player.maxShield) * 100));
+        const shieldBar = document.getElementById('hud-shield-bar');
+        const shieldVal = document.getElementById('hud-shield-val');
+        if (shieldBar) shieldBar.style.width = `${shieldPct}%`;
+        if (shieldVal) shieldVal.textContent = `${Math.ceil(shieldPct)}%`;
+
         const hpPct = Math.max(0, Math.min(100, (this.player.hp / this.player.maxHp) * 100));
         document.getElementById('hud-hp-bar').style.width = `${hpPct}%`;
         document.getElementById('hud-hp-val').textContent = `${Math.ceil(hpPct)}%`;

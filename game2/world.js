@@ -14,7 +14,7 @@ class World3D {
         // City generation parameters
         this.cityLength = 1600;
         this.chunkSize = 200;
-        this.roadWidth = 140;
+        this.roadWidth = 200;
 
         // Shared Three.js Materials & Geometries for high performance
         this.initMaterials();
@@ -69,7 +69,8 @@ class World3D {
         for (let i = 0; i < countPerSide * 2; i++) {
             const isLeft = i % 2 === 0;
             const side = isLeft ? -1 : 1;
-            const x = side * (this.roadWidth / 2 + 30 + Math.random() * 180);
+            // Place skyscrapers with safe clearance from flight freeway
+            const x = side * (this.roadWidth / 2 + 55 + Math.random() * 180);
             const z = -(i * 30) - 100;
             const w = 40 + Math.random() * 40;
             const d = 40 + Math.random() * 40;
@@ -206,7 +207,7 @@ class World3D {
         }
     }
 
-    checkBuildingCollisions(playerPos, radius = 6) {
+    checkBuildingCollisions(playerPos, radius = 5.0) {
         for (let b of this.buildings) {
             // Check bounding box overlap with player
             const bx = b.mesh.position.x;
@@ -221,10 +222,10 @@ class World3D {
                 Math.abs(playerPos.y - by) < hh + radius &&
                 Math.abs(playerPos.z - bz) < hd + radius
             ) {
-                return true; // Collision!
+                return { hit: true, pushX: Math.sign(-bx) * 22 }; // Bounce back toward center
             }
         }
-        return false;
+        return null;
     }
 }
 
